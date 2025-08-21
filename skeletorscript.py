@@ -48,7 +48,7 @@ from bpy.types import (Panel,
 
 OMITDELTAOUTPUT = True # <= Hide the -- delta comments at the ends of the lines, to reduce fileSize
 ROTATION_MODE = "YXZ"
-FullDebug = False
+FullDebug = True # False
 
 class MySettings(PropertyGroup):
 	is_walk: BoolProperty(
@@ -456,19 +456,23 @@ class SkeletorOperator(bpy.types.Operator):
 		bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 		#bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
-		print("\n\n====Looking for mirrorable pieces===")
+		# print("\n\n====Looking for mirrorable pieces===")
 		# to enable : https://blender.stackexchange.com/questions/43720/how-to-mirror-a-walk-cycle
 		# rootpiece.recurseleftrightbones()
+
 		for name, piece in pieces.items():
 			piece.bonename = name
 			for name2, piece2 in pieces.items():
 				if name == name2:
 					continue
-				if name.lower().replace('l', '').replace('r', '') == name2.lower().replace('l', '').replace('r', ''):
-					if piece.worldpos[0] > 0:
-						piece.bonename = piece.bonename + '.R'
-					else:
-						piece.bonename = piece.bonename + '.L'
+		###########################################################################################
+		### Auto-mirroring of piece names was causing issues with assimp workflow, removed for now
+		###########################################################################################
+		# 		if name.lower().replace('l', '').replace('r', '') == name2.lower().replace('l', '').replace('r', ''):
+		# 			if piece.worldpos[0] > 0:
+		# 				piece.bonename = piece.bonename + '.R'
+		# 			else:
+		# 				piece.bonename = piece.bonename + '.L'
 
 		print("\n\n====Adding Bones=====")
 		for name in dfs_piece_order:
