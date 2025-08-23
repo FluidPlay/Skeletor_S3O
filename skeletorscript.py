@@ -101,6 +101,11 @@ class MySettings(PropertyGroup):
 		description="Don't require bones to be created by Skeletor, useful for skinning export. Use it with the Assimp workflow option",
 		default=False
 	)
+	dae_orientation: BoolProperty(
+		name="DAE orientation",
+		description="Switches the sign of Y rotations. Use it with the Assimp workflow option",
+		default=False
+	)
 
 
 class Skelepanel(bpy.types.Panel):
@@ -131,6 +136,7 @@ class Skelepanel(bpy.types.Panel):
 		layout.prop(mytool, "is_death", text="Is Death Script")
 		layout.prop(mytool, "assimp_workflow", text="Assimp Workflow")
 		layout.prop(mytool, "skinning", text="Export for Skinning")
+		layout.prop(mytool, "dae_orientation", text="Export for DAE (vs s3o)")
 		row = layout.row()
 		row.operator('skele.skeletorbosmaker', text='2. Create BOS')
 		row = layout.row()
@@ -938,6 +944,7 @@ class SkeletorBOSMaker(bpy.types.Operator):
 		FIRSTFRAMESTANCE = context.scene.my_tool.firstframestance
 		VARIABLESCALE = context.scene.my_tool.varscale
 		VARIABLEAMPLITUDE = context.scene.my_tool.varamplitude
+		DAE = context.scene.my_tool.dae_orientation
 
 		move_variable = '[%.6f]'
 		turn_variable = '<%.6f>'
@@ -951,12 +958,14 @@ class SkeletorBOSMaker(bpy.types.Operator):
 
 		#AXES = 'XZY'
 		BOSAXIS = ['x-axis', 'z-axis', 'y-axis']
-		blender_to_bos_axis_multiplier = {'move': [1.0, 1.0, 1.0], 'turn': [-1.0, -1.0, 1.0]}
+		axis_multiplier = 	{'move': [1.0, 1.0, 1.0], 'turn': [-1.0, -1.0, 1.0]} if not DAE \
+							else \
+							{'move': [1.0, 1.0, 1.0], 'turn': [-1.0, 1.0, 1.0]}
 
 		def MakeBOSLineString(turn_or_move, bonename, axisindex, targetposition, speed, variablespeed=True, indents=3,
 							  delta=0):
 			axisname = BOSAXIS[axisindex]
-			targetposition = targetposition * blender_to_bos_axis_multiplier[turn_or_move][axisindex],
+			targetposition = targetposition * axis_multiplier[turn_or_move][axisindex],
 			cmdline = '' + '\t' * indents
 			cmdline = cmdline + turn_or_move + ' '
 			cmdline = cmdline + bonename + ' to '
@@ -1099,8 +1108,7 @@ class SkeletorBOSMaker(bpy.types.Operator):
 
 						if FIRSTFRAMESTANCE and frame_index == 0:
 							firstframestance_positions[stopwalking_cmd] = value * \
-																		  blender_to_bos_axis_multiplier[turn_or_move][
-																			  axis_index]
+																		axis_multiplier[turn_or_move][axis_index]
 
 						maxvelocity = abs(value - prevvalue) / sleeptime
 						if stopwalking_cmd in stopwalking_maxspeed:
@@ -1245,6 +1253,7 @@ class SkeletorLUSMaker(SkeletorBOSMaker):
 		VARIABLESCALE = context.scene.my_tool.varscale
 		VARIABLEAMPLITUDE = context.scene.my_tool.varamplitude
 		ASSIMP = context.scene.my_tool.assimp_workflow
+		DAE = context.scene.my_tool.dae_orientation
 
 		move_variable = '%.6f'
 		turn_variable = '%.6f'
@@ -1256,13 +1265,16 @@ class SkeletorLUSMaker(SkeletorBOSMaker):
 			move_variable = "((" + move_variable + " *animAmplitude)/100)"
 			turn_variable = "((" + turn_variable + " *animAmplitude)/100)"
 
-		LUSAXIS = ['x_axis', 'z_axis' if not ASSIMP else 'y_axis', 'y_axis' if not ASSIMP else 'z_axis']
-		blender_to_bos_axis_multiplier = {'Move': [1.0, 1.0, 1.0], 'Turn': [-1.0, 1.0, 1.0]}
-
-		def MakeBOSLineString(turn_or_move, bonename, axisindex, targetposition, speed, variablespeed=True, indents=3,
+		LUSAXIS = [	'x_axis', \
+					'z_axis' if not ASSIMP else 'y_axis', \
+					'y_axis' if not ASSIMP else 'z_axis']
+		axis_multiplier = {'Move': [1.0, 1.0, 1.0], 'Turn': [-1.0, 1.0, 1.0]} if not DAE \
+							else \
+							{'Move': [1.0, 1.0, 1.0], 'Turn': [-1.0, -1.0, 1.0]}	# Test/WIP
+ 		def MakeBOSLineString(turn_or_move, bonename, axisindex, targetposition, speed, variablespeed=True, indents=3,
 							  delta=0):
 			axisname = LUSAXIS[axisindex]
-			targetposition = targetposition * blender_to_bos_axis_multiplier[turn_or_move][axisindex]
+			targetposition = targetposition * axis_multiplier[turn_or_move][axisindex]
 			cmdline = '' + '\t' * indents
 			cmdline = cmdline + turn_or_move + '('
 			cmdline = cmdline + bonename + ', '
@@ -1440,7 +1452,7 @@ local function Animate() -- %s
 
 						if FIRSTFRAMESTANCE and frame_index == 0:
 							firstframestance_positions[stopwalking_cmd] = value * \
-																		  blender_to_bos_axis_multiplier[turn_or_move][
+																		  axis_multiplier[turn_or_move][
 																			  axis_index]
 
 						maxvelocity = abs(value - prevvalue) / sleeptime
@@ -1834,6 +1846,7 @@ class SkeletorLUSTweenMaker(SkeletorBOSMaker):
 		VARIABLEAMPLITUDE = context.scene.my_tool.varamplitude
 		SCENEFIRSTFRAME = context.scene.frame_start
 		SCENELASTFRAME = context.scene.frame_end
+		DAE = context.scene.my_tool.dae_orientation
 
 		move_variable = '%.6f'
 		turn_variable = '%.6f'
@@ -1848,9 +1861,11 @@ class SkeletorLUSTweenMaker(SkeletorBOSMaker):
 
 		# LUSAXIS = ['x_axis', 'z_axis', 'y_axis']
 		LUSAXIS = ['x_axis', 'z_axis' if not ASSIMP else 'y_axis', 'y_axis' if not ASSIMP else 'z_axis']
-		blender_to_bos_axis_multiplier = {'move': [-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0], 'turn': [-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0]}
+		### MaDD: That's the most important one.
+		axis_multiplier = {'move': [-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0],	\
+							'turn': [-1.0, -1.0, 1.0] if DAE else ([-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0])}
 
-		def MakeLusTweenLineString(cmdID, boneName, axisIndex, targetValue, firstFrame, lastFrame, variableSpeed=True, indents=7,
+		def MakeLusTweenLineString(cmdID, boneName, axisIndex, targetValue, firstFrame, lastFrame, variableSpeed=True, indents=7, \
 		                           delta=0, luaIdx=0):
 			cmdLine = '' + '\t' * indents
 			if cmdID == "hide_viewport":
@@ -1861,7 +1876,7 @@ class SkeletorLUSTweenMaker(SkeletorBOSMaker):
 				cmdLine = cmdLine + "firstFrame=" + str(firstFrame) + ",},"
 				return cmdLine
 			axisName = LUSAXIS[axisIndex]
-			targetValue = targetValue * blender_to_bos_axis_multiplier[cmdID][axisIndex]
+			targetValue = targetValue * axis_multiplier[cmdID][axisIndex]
 			cmdLine = cmdLine + '[' + str(luaIdx) +']={cmd="' + cmdID + '", '
 			cmdLine = cmdLine + 'axis=' + axisName + ', targetValue='
 			cmdLine = cmdLine + floatFormat % targetValue + ', '
