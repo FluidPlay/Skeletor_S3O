@@ -960,7 +960,7 @@ class SkeletorBOSMaker(bpy.types.Operator):
 		BOSAXIS = ['x-axis', 'z-axis', 'y-axis']
 		axis_multiplier = 	{'move': [1.0, 1.0, 1.0], 'turn': [-1.0, -1.0, 1.0]} if not DAE \
 							else \
-							{'move': [1.0, 1.0, 1.0], 'turn': [-1.0, 1.0, 1.0]}
+							{'move': [-1.0, -1.0, 1.0], 'turn': [-1.0, 1.0, 1.0]}
 
 		def MakeBOSLineString(turn_or_move, bonename, axisindex, targetposition, speed, variablespeed=True, indents=3,
 							  delta=0):
@@ -1270,7 +1270,7 @@ class SkeletorLUSMaker(SkeletorBOSMaker):
 					'y_axis' if not ASSIMP else 'z_axis']
 		axis_multiplier = {'Move': [1.0, 1.0, 1.0], 'Turn': [-1.0, 1.0, 1.0]} if not DAE \
 							else \
-							{'Move': [1.0, 1.0, 1.0], 'Turn': [-1.0, -1.0, 1.0]}	# Test/WIP
+							{'Move': [-1.0, -1.0, 1.0], 'Turn': [-1.0, -1.0, 1.0]}	# Test/WIP
  		def MakeBOSLineString(turn_or_move, bonename, axisindex, targetposition, speed, variablespeed=True, indents=3,
 							  delta=0):
 			axisname = LUSAXIS[axisindex]
@@ -1862,7 +1862,7 @@ class SkeletorLUSTweenMaker(SkeletorBOSMaker):
 		# LUSAXIS = ['x_axis', 'z_axis', 'y_axis']
 		LUSAXIS = ['x_axis', 'z_axis' if not ASSIMP else 'y_axis', 'y_axis' if not ASSIMP else 'z_axis']
 		### MaDD: That's the most important one.
-		axis_multiplier = {'move': [-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0],	\
+		axis_multiplier = {'move': [-1.0, -1.0, 1.0] if DAE else ([-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0]),	\
 							'turn': [-1.0, -1.0, 1.0] if DAE else ([-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0])}
 
 		def MakeLusTweenLineString(cmdID, boneName, axisIndex, targetValue, firstFrame, lastFrame, variableSpeed=True, indents=7, \
