@@ -460,7 +460,6 @@ class SkeletorOperator(bpy.types.Operator):
 
 		bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 		bpy.ops.object.mode_set(mode='EDIT', toggle=False)
-		#bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
 		# print("\n\n====Looking for mirrorable pieces===")
 		# to enable : https://blender.stackexchange.com/questions/43720/how-to-mirror-a-walk-cycle
@@ -595,19 +594,21 @@ class SkeletorOperator(bpy.types.Operator):
 		# return
 		print("=====Reparenting Bone-Bones=======")
 
-		for name, piece in pieces.items(): # not getattr(piece.parent, "name", "None") and
+		for name, piece in pieces.items():  # not getattr(piece.parent, "name", "None") and
 			if piece.parent is not None and not piece.isAimXY:
 				print("piece " + name + " | parent: " + piece.parent.name)
 				piece.bone.parent = piece.parent.bone
 				if ASSIMP and len(piece.parent.children) == 1:
 					piece.parent.bone.tail = piece.bone.head
+					# Zero-length bones are rapidly "deleted" by Blender, so we prevent that (and resulting errors)
+					if piece.parent.bone.length == 0:
+						piece.parent.bone.tail = piece.parent.bone.head + Vector((0,5,0))
 
 		bpy.ops.object.editmode_toggle()  # These are required so that 'armature_object.pose.bones[piece.bonename]' works
 		bpy.ops.object.posemode_toggle()
 
-		print("=====Setting IK Targets=======")
-
 		if AUTOADDIK:
+			print("=====Setting IK Targets=======")
 			for name, piece in pieces.items():
 				if not piece.isAimXY:
 					armature_object.pose.bones[piece.bonename].rotation_mode = ROTATION_MODE  # ROTATION_MODE = 'YXZ'  # was: 'ZXY'
@@ -625,7 +626,14 @@ class SkeletorOperator(bpy.types.Operator):
 					constraint.chain_count = chainlength
 					armature_object.pose.bones[piece.bonename].ik_stiffness_z = 0.99  # avoids having to create knee poles
 		else:
+			# pass
+			print("\n\n### Bone Names Debugging: \n")
+			bpy.context.view_layer.objects.active = armature_object
+			armature_data = bpy.context.object.data
+			# for bone in armature_data.bones:
+			# 	print(f"Bone Name (Data): {bone.name}")
 			for name, piece in pieces.items():
+				# print("piece " + name + " | bonename: " + piece.bonename)
 				armature_object.pose.bones[piece.bonename].rotation_mode = ROTATION_MODE  # was: 'ZXY'
 
 		print("=====Parenting meshes to bones=======")
