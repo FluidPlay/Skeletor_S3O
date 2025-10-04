@@ -15,7 +15,7 @@
 bl_info = {
 	"name": "Skeletor_S3O SpringRTS (.s3o)",
 	"author": "Beherith  <mysterme@gmail.com>",
-	"version": (0, 4, 1),
+	"version": (0, 4, 2t),
 	"blender": (2, 80, 0),
 	"location": "3D View > Side panel",
 	"description": "Create a Skeleton and a BOS for a SpringRTS",
@@ -48,7 +48,7 @@ from bpy.types import (Panel,
 
 OMITDELTAOUTPUT = True # <= Hide the -- delta comments at the ends of the lines, to reduce fileSize
 ROTATION_MODE = "YXZ"
-FullDebug = True # False
+FullDebug = False
 
 class MySettings(PropertyGroup):
 	is_walk: BoolProperty(
@@ -101,11 +101,6 @@ class MySettings(PropertyGroup):
 		description="Don't require bones to be created by Skeletor, useful for skinning export. Use it with the Assimp workflow option",
 		default=False
 	)
-	dae_orientation: BoolProperty(
-		name="DAE orientation",
-		description="Switches the sign of Y rotations. Use it with the Assimp workflow option",
-		default=False
-	)
 
 
 class Skelepanel(bpy.types.Panel):
@@ -136,7 +131,6 @@ class Skelepanel(bpy.types.Panel):
 		layout.prop(mytool, "is_death", text="Is Death Script")
 		layout.prop(mytool, "assimp_workflow", text="Assimp Workflow")
 		layout.prop(mytool, "skinning", text="Export for Skinning")
-		layout.prop(mytool, "dae_orientation", text="Export for DAE (vs s3o)")
 		row = layout.row()
 		row.operator('skele.skeletorbosmaker', text='2. Create BOS')
 		row = layout.row()
@@ -460,24 +454,21 @@ class SkeletorOperator(bpy.types.Operator):
 
 		bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 		bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+		#bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
-		# print("\n\n====Looking for mirrorable pieces===")
+		print("\n\n====Looking for mirrorable pieces===")
 		# to enable : https://blender.stackexchange.com/questions/43720/how-to-mirror-a-walk-cycle
 		# rootpiece.recurseleftrightbones()
-
 		for name, piece in pieces.items():
 			piece.bonename = name
 			for name2, piece2 in pieces.items():
 				if name == name2:
 					continue
-		###########################################################################################
-		### Auto-mirroring of piece names was causing issues with assimp workflow, removed for now
-		###########################################################################################
-		# 		if name.lower().replace('l', '').replace('r', '') == name2.lower().replace('l', '').replace('r', ''):
-		# 			if piece.worldpos[0] > 0:
-		# 				piece.bonename = piece.bonename + '.R'
-		# 			else:
-		# 				piece.bonename = piece.bonename + '.L'
+				if name.lower().replace('l', '').replace('r', '') == name2.lower().replace('l', '').replace('r', ''):
+					if piece.worldpos[0] > 0:
+						piece.bonename = piece.bonename + '.R'
+					else:
+						piece.bonename = piece.bonename + '.L'
 
 		print("\n\n====Adding Bones=====")
 		for name in dfs_piece_order:
@@ -594,21 +585,17 @@ class SkeletorOperator(bpy.types.Operator):
 		# return
 		print("=====Reparenting Bone-Bones=======")
 
-		for name, piece in pieces.items():  # not getattr(piece.parent, "name", "None") and
+		for name, piece in pieces.items(): # not getattr(piece.parent, "name", "None") and
 			if piece.parent is not None and not piece.isAimXY:
 				print("piece " + name + " | parent: " + piece.parent.name)
 				piece.bone.parent = piece.parent.bone
-				if ASSIMP and len(piece.parent.children) == 1:
-					piece.parent.bone.tail = piece.bone.head
-					# Zero-length bones are rapidly "deleted" by Blender, so we prevent that (and resulting errors)
-					if piece.parent.bone.length == 0:
-						piece.parent.bone.tail = piece.parent.bone.head + Vector((0,5,0))
 
 		bpy.ops.object.editmode_toggle()  # These are required so that 'armature_object.pose.bones[piece.bonename]' works
 		bpy.ops.object.posemode_toggle()
 
+		print("=====Setting IK Targets=======")
+
 		if AUTOADDIK:
-			print("=====Setting IK Targets=======")
 			for name, piece in pieces.items():
 				if not piece.isAimXY:
 					armature_object.pose.bones[piece.bonename].rotation_mode = ROTATION_MODE  # ROTATION_MODE = 'YXZ'  # was: 'ZXY'
@@ -626,14 +613,7 @@ class SkeletorOperator(bpy.types.Operator):
 					constraint.chain_count = chainlength
 					armature_object.pose.bones[piece.bonename].ik_stiffness_z = 0.99  # avoids having to create knee poles
 		else:
-			# pass
-			print("\n\n### Bone Names Debugging: \n")
-			bpy.context.view_layer.objects.active = armature_object
-			armature_data = bpy.context.object.data
-			# for bone in armature_data.bones:
-			# 	print(f"Bone Name (Data): {bone.name}")
 			for name, piece in pieces.items():
-				# print("piece " + name + " | bonename: " + piece.bonename)
 				armature_object.pose.bones[piece.bonename].rotation_mode = ROTATION_MODE  # was: 'ZXY'
 
 		print("=====Parenting meshes to bones=======")
@@ -952,7 +932,6 @@ class SkeletorBOSMaker(bpy.types.Operator):
 		FIRSTFRAMESTANCE = context.scene.my_tool.firstframestance
 		VARIABLESCALE = context.scene.my_tool.varscale
 		VARIABLEAMPLITUDE = context.scene.my_tool.varamplitude
-		DAE = context.scene.my_tool.dae_orientation
 
 		move_variable = '[%.6f]'
 		turn_variable = '<%.6f>'
@@ -966,14 +945,12 @@ class SkeletorBOSMaker(bpy.types.Operator):
 
 		#AXES = 'XZY'
 		BOSAXIS = ['x-axis', 'z-axis', 'y-axis']
-		axis_multiplier = 	{'move': [1.0, 1.0, 1.0], 'turn': [-1.0, -1.0, 1.0]} if not DAE \
-							else \
-							{'move': [-1.0, -1.0, 1.0], 'turn': [-1.0, 1.0, 1.0]}
+		blender_to_bos_axis_multiplier = {'move': [1.0, 1.0, 1.0], 'turn': [-1.0, -1.0, 1.0]}
 
 		def MakeBOSLineString(turn_or_move, bonename, axisindex, targetposition, speed, variablespeed=True, indents=3,
 							  delta=0):
 			axisname = BOSAXIS[axisindex]
-			targetposition = targetposition * axis_multiplier[turn_or_move][axisindex],
+			targetposition = targetposition * blender_to_bos_axis_multiplier[turn_or_move][axisindex],
 			cmdline = '' + '\t' * indents
 			cmdline = cmdline + turn_or_move + ' '
 			cmdline = cmdline + bonename + ' to '
@@ -1116,7 +1093,8 @@ class SkeletorBOSMaker(bpy.types.Operator):
 
 						if FIRSTFRAMESTANCE and frame_index == 0:
 							firstframestance_positions[stopwalking_cmd] = value * \
-																		axis_multiplier[turn_or_move][axis_index]
+																		  blender_to_bos_axis_multiplier[turn_or_move][
+																			  axis_index]
 
 						maxvelocity = abs(value - prevvalue) / sleeptime
 						if stopwalking_cmd in stopwalking_maxspeed:
@@ -1261,7 +1239,6 @@ class SkeletorLUSMaker(SkeletorBOSMaker):
 		VARIABLESCALE = context.scene.my_tool.varscale
 		VARIABLEAMPLITUDE = context.scene.my_tool.varamplitude
 		ASSIMP = context.scene.my_tool.assimp_workflow
-		DAE = context.scene.my_tool.dae_orientation
 
 		move_variable = '%.6f'
 		turn_variable = '%.6f'
@@ -1273,16 +1250,13 @@ class SkeletorLUSMaker(SkeletorBOSMaker):
 			move_variable = "((" + move_variable + " *animAmplitude)/100)"
 			turn_variable = "((" + turn_variable + " *animAmplitude)/100)"
 
-		LUSAXIS = [	'x_axis', \
-					'z_axis' if not ASSIMP else 'y_axis', \
-					'y_axis' if not ASSIMP else 'z_axis']
-		axis_multiplier = {'Move': [1.0, 1.0, 1.0], 'Turn': [-1.0, 1.0, 1.0]} if not DAE \
-							else \
-							{'Move': [-1.0, -1.0, 1.0], 'Turn': [-1.0, -1.0, 1.0]}	# Test/WIP
- 		def MakeBOSLineString(turn_or_move, bonename, axisindex, targetposition, speed, variablespeed=True, indents=3,
+		LUSAXIS = ['x_axis', 'z_axis' if not ASSIMP else 'y_axis', 'y_axis' if not ASSIMP else 'z_axis']
+		blender_to_bos_axis_multiplier = {'Move': [1.0, 1.0, 1.0], 'Turn': [-1.0, 1.0, 1.0]}
+
+		def MakeBOSLineString(turn_or_move, bonename, axisindex, targetposition, speed, variablespeed=True, indents=3,
 							  delta=0):
 			axisname = LUSAXIS[axisindex]
-			targetposition = targetposition * axis_multiplier[turn_or_move][axisindex]
+			targetposition = targetposition * blender_to_bos_axis_multiplier[turn_or_move][axisindex]
 			cmdline = '' + '\t' * indents
 			cmdline = cmdline + turn_or_move + '('
 			cmdline = cmdline + bonename + ', '
@@ -1460,7 +1434,7 @@ local function Animate() -- %s
 
 						if FIRSTFRAMESTANCE and frame_index == 0:
 							firstframestance_positions[stopwalking_cmd] = value * \
-																		  axis_multiplier[turn_or_move][
+																		  blender_to_bos_axis_multiplier[turn_or_move][
 																			  axis_index]
 
 						maxvelocity = abs(value - prevvalue) / sleeptime
@@ -1854,7 +1828,6 @@ class SkeletorLUSTweenMaker(SkeletorBOSMaker):
 		VARIABLEAMPLITUDE = context.scene.my_tool.varamplitude
 		SCENEFIRSTFRAME = context.scene.frame_start
 		SCENELASTFRAME = context.scene.frame_end
-		DAE = context.scene.my_tool.dae_orientation
 
 		move_variable = '%.6f'
 		turn_variable = '%.6f'
@@ -1869,11 +1842,9 @@ class SkeletorLUSTweenMaker(SkeletorBOSMaker):
 
 		# LUSAXIS = ['x_axis', 'z_axis', 'y_axis']
 		LUSAXIS = ['x_axis', 'z_axis' if not ASSIMP else 'y_axis', 'y_axis' if not ASSIMP else 'z_axis']
-		### MaDD: That's the most important one.
-		axis_multiplier = {'move': [-1.0, -1.0, 1.0] if DAE else ([-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0]),	\
-							'turn': [-1.0, -1.0, 1.0] if DAE else ([-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0])}
+		blender_to_bos_axis_multiplier = {'move': [-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0], 'turn': [-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0]}
 
-		def MakeLusTweenLineString(cmdID, boneName, axisIndex, targetValue, firstFrame, lastFrame, variableSpeed=True, indents=7, \
+		def MakeLusTweenLineString(cmdID, boneName, axisIndex, targetValue, firstFrame, lastFrame, variableSpeed=True, indents=7,
 		                           delta=0, luaIdx=0):
 			cmdLine = '' + '\t' * indents
 			if cmdID == "hide_viewport":
@@ -1884,7 +1855,7 @@ class SkeletorLUSTweenMaker(SkeletorBOSMaker):
 				cmdLine = cmdLine + "firstFrame=" + str(firstFrame) + ",},"
 				return cmdLine
 			axisName = LUSAXIS[axisIndex]
-			targetValue = targetValue * axis_multiplier[cmdID][axisIndex]
+			targetValue = targetValue * blender_to_bos_axis_multiplier[cmdID][axisIndex]
 			cmdLine = cmdLine + '[' + str(luaIdx) +']={cmd="' + cmdID + '", '
 			cmdLine = cmdLine + 'axis=' + axisName + ', targetValue='
 			cmdLine = cmdLine + floatFormat % targetValue + ', '
