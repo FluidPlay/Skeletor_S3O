@@ -6,7 +6,7 @@ Video Tutorial:
 https://www.youtube.com/watch?v=DaMLNfOR6KU
 
 # Skeletor_S3O
-A blender script that automatically generates a skeleton for an s3o imported model for SpringRTS animation
+A blender script that automatically generates a skeleton for an s3o imported model for SpringRTS and Recoil Engine animation
 
 Usage:
 
@@ -18,7 +18,7 @@ Usage:
 
 4. Press the "Create Skeleton" button
 
-5. You can now go into Pose mode and flail the appendages around. 
+5. You can now go into Pose mode and flail the appendages around. ATTENTION: Spring/Recoil engine doesn't support properly rotations greater than 130 degrees, which might lead to undesired "flips" during animation playback. When that's required and to avoid some gimbal lock issues, you might need to add intermediary empty object parts, with the same pivot, and apply smaller rotations to each part.
 
 6. If you keep enabled "Add IK targets to chains", the addon will setup up inverse kinematics automagically for you, so you can rotate chains from a controller at its tip. If that fails for some reason, I recommend watching this video, in 5 minutes it will explain things better than I ever could:
 
