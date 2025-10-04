@@ -10,7 +10,7 @@ A blender script that automatically generates a skeleton for an s3o imported mod
 
 Usage:
 
-1. Register the script with blender 2.80+ 
+1. Register the script with any version of blender from 2.80 up to 4.3 LTS
 
 2. Select the collection where the root piece (pelvis/base) of the model is. Make sure it's within a collection.
 
