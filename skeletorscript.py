@@ -1338,7 +1338,7 @@ class SkeletorLUSMaker(SkeletorBOSMaker):
 		axis_multiplier = {'Move': [1.0, 1.0, 1.0], 'Turn': [-1.0, 1.0, 1.0]} if not DAE \
 							else \
 							{'Move': [-1.0, -1.0, 1.0], 'Turn': [-1.0, -1.0, 1.0]}	# Test/WIP
- 		def MakeBOSLineString(turn_or_move, bonename, axisindex, targetposition, speed, variablespeed=True, indents=3,
+		def MakeBOSLineString(turn_or_move, bonename, axisindex, targetposition, speed, variablespeed=True, indents=3,
 							  delta=0):
 			axisname = LUSAXIS[axisindex]
 			targetposition = targetposition * axis_multiplier[turn_or_move][axisindex]
@@ -1932,7 +1932,7 @@ class SkeletorLUSTweenMaker(SkeletorBOSMaker):
 							'turn': [-1.0, -1.0, 1.0] if DAE else ([-1.0, 1.0, 1.0] if not ASSIMP else [1.0, 1.0, 1.0])}
 
 		def MakeLusTweenLineString(cmdID, boneName, axisIndex, targetValue, firstFrame, lastFrame, variableSpeed=True, indents=7, \
-		                           delta=0, luaIdx=0):
+								   delta=0, luaIdx=0):
 			cmdLine = '' + '\t' * indents
 			if cmdID == "hide_viewport":
 				if targetValue == 1:
@@ -1988,13 +1988,13 @@ class SkeletorLUSTweenMaker(SkeletorBOSMaker):
 				line = line + bone_name + " = " + bone_name + ",\n"
 				outputText += line
 			outputText += tabs + "rad = math.rad,\n" \
-                    + tabs + "x_axis = x_axis,\n" \
-                    + tabs + "y_axis = y_axis,\n" \
-                    + tabs + "z_axis = z_axis,\n" \
-                    + tabs + "Turn = Turn,\n" \
-                    + tabs + "Move = Move,\n" \
-                    + tabs + "Sleep = Sleep,\n" \
-                    + tabs + "initTween = initTween,\n" \
+					+ tabs + "x_axis = x_axis,\n" \
+					+ tabs + "y_axis = y_axis,\n" \
+					+ tabs + "z_axis = z_axis,\n" \
+					+ tabs + "Turn = Turn,\n" \
+					+ tabs + "Move = Move,\n" \
+					+ tabs + "Sleep = Sleep,\n" \
+					+ tabs + "initTween = initTween,\n" \
 					+ "}\n\n"
 			return outputText
 
